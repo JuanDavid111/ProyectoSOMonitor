@@ -15,6 +15,6 @@ typedef struct {
 extern ArchivoEmpaquetable archivosEmpaquetables[MAX_FILES];
 extern int cantidadEmpaquetables;
 
-void empaquetar_archivos(ArchivoEmpaquetable archivos[], int cantidad);
+//void empaquetar_archivos(ArchivoEmpaquetable archivos[], int cantidad);
 
 #endif
