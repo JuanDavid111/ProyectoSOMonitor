@@ -19,6 +19,7 @@ void demonizar() {
     // Crear un nuevo proceso hijo
     pid = fork();
     if (pid < 0) {
+        syslog(LOG_ERR,"Error al crear el proceso hijo: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
     if (pid > 0) {
@@ -27,9 +28,11 @@ void demonizar() {
     }
 
     // Crear una nueva sesión
-    if (setsid() < 0)
+    if (setsid() < 0){
+        syslog(LOG_ERR, "Error al crear una nueva sesión: %s", strerror(errno));
         exit(EXIT_FAILURE);
-
+    }
+    
     // Ignorar señales SIGHUP y SIGCHLD
     signal(SIGCHLD, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
@@ -38,6 +41,7 @@ void demonizar() {
     // Segundo fork para evitar adquirir terminal de control
     pid = fork();
     if (pid < 0) {
+        syslog(LOG_ERR, "Error al crear el segundo proceso hijo: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
     if (pid > 0) {
@@ -50,7 +54,7 @@ void demonizar() {
 
     // Cambiar el directorio de trabajo a la raíz
     if (chdir("/") < 0) {
-        syslog(LOG_ERR, "Error al cambiar el directorio de trabajo: %s", strerror(errno));
+        syslog(LOG_ERR, "Error al cambiar el directorio de trabajo a /: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
