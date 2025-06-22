@@ -1,39 +1,20 @@
-# Variables
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -std=c11
+OBJ = main.o prueba4.o empaquetador.o
 
-OBJ = main.o demonio.o
-TARGET = proyect
-MONITOR = monitor
+all: programa
 
-.PHONY: all clean run_all stop_all
+programa: $(OBJ)
+	$(CC) $(CFLAGS) -o programa $(OBJ)
 
-all: $(TARGET) $(MONITOR)
+main.o: main.c prueba4.h
+	$(CC) $(CFLAGS) -c main.c
 
-# Compilar binario principal
-$(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+prueba4.o: prueba4.c prueba4.h empaquetador.h
+	$(CC) $(CFLAGS) -c prueba4.c
 
-main.o: main.c demonio.h
-demonio.o: demonio.c demonio.h
-
-# Compilar prueba3 como ejecutable separado
-$(MONITOR): monitor.c monitor.h
-	$(CC) $(CFLAGS) -o $@ monitor.c
-
-# Ejecutar ambos en paralelo
-run_all: all
-	@echo "Iniciando $(TARGET)..."
-	./$(TARGET) &
-
-	@echo "Iniciando $(MONITOR)..."
-	./$(MONITOR) &
-
-# Detener ambos si están corriendo
-stop_all:
-	@echo "Deteniendo $(TARGET) y $(MONITOR)..."
-	-pkill -x $(TARGET)
-	-pkill -x $(MONITOR)
+empaquetador.o: empaquetador.c empaquetador.h
+	$(CC) $(CFLAGS) -c empaquetador.c
 
 clean:
-	rm -f $(OBJ) $(TARGET) $(MONITOR)
+	rm -f *.o programa

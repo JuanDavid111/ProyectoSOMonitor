@@ -1,23 +1,33 @@
 #include "monitor.h"
-
+#include "empaquetador.h"
 volatile sig_atomic_t detener = 0;
-
+ArchivoEmpaquetable archivosEmpaquetables[MAX_FILES];
+int cantidadEmpaquetables = 0;
 void manejar_salida(int signo) {
     detener = 1;
 }
 
-int is_regular_file(const char *path) {
-    struct stat path_stat;
-    if (stat(path, &path_stat) != 0) return 0;
-    return S_ISREG(path_stat.st_mode);
+// Verifica si el archivo es aceptable: no es directorio y es regular
+int archivoAceptado(const char *ruta) {
+    struct stat ruta_stat;
+    if (stat(ruta, &ruta_stat) != 0) return 0;
+
+    if (S_ISDIR(ruta_stat.st_mode)) {
+        // Es un subdirectorio: descartamos
+        return 0;
+    }
+
+    return S_ISREG(ruta_stat.st_mode);
 }
 
-int ends_with_gz(const char *filename) {
-    size_t len = strlen(filename);
-    return len > 3 && strcmp(filename + len - 3, ".gz") == 0;
+// Ignora archivos terminados en .gz
+int ignoraGZ(const char *nombreArchivo) {
+    size_t len = strlen(nombreArchivo);
+    return len > 3 && strcmp(nombreArchivo + len - 3, ".gz") == 0;
 }
 
-void compute_md5(const char *filepath, char *md5_output) {
+// Calcula el hash md5 usando fork + exec + pipe
+void md5sum(const char *rutaArchivo, char *md5_salida) {
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -31,19 +41,40 @@ void compute_md5(const char *filepath, char *md5_output) {
     } else if (pid == 0) {
         close(pipefd[0]); // Hijo: cerrar lectura
         dup2(pipefd[1], STDOUT_FILENO); // Redirigir stdout
-        execlp("md5sum", "md5sum", filepath, NULL);
+        execlp("md5sum", "md5sum", rutaArchivo, NULL);
         perror("execlp");
         exit(EXIT_FAILURE);
     } else {
         close(pipefd[1]); // Padre: cerrar escritura
         waitpid(pid, NULL, 0);
-        read(pipefd[0], md5_output, 256);
+        read(pipefd[0], md5_salida, 256);
         close(pipefd[0]);
-        md5_output[strcspn(md5_output, " ")] = '\0';
+        md5_salida[strcspn(md5_salida, " ")] = '\0'; // solo el hash
     }
 }
 
-void revisar_directorio(FileHash *hashes_prev, int *num_prev) {
+void agregarArchivoEmpaquetar(const char *ruta, ArchivoEmpaquetable *lista, int *cantidad) {
+    if (*cantidad >= MAX_FILES) return;
+
+    strncpy(lista[*cantidad].ruta_completa, ruta, MAX_PATH_LEN - 1);
+
+    const char *nombre_base = strrchr(ruta, '/');
+    if (!nombre_base) nombre_base = ruta;
+    else nombre_base++;
+
+    strncpy(lista[*cantidad].nombre_truncado, nombre_base, 31);
+    lista[*cantidad].nombre_truncado[31] = '\0';
+
+    struct stat sb;
+    if (stat(ruta, &sb) == 0) {
+        lista[*cantidad].tamano_bytes = sb.st_size;
+    } else {
+        lista[*cantidad].tamano_bytes = 0;
+    }
+
+    (*cantidad)++;}
+
+void revisarDirectorio(FileHash *hashes_prev, int *num_prev) {
     DIR *dir = opendir(DIRECTORY);
     if (!dir) {
         perror("opendir");
@@ -51,58 +82,51 @@ void revisar_directorio(FileHash *hashes_prev, int *num_prev) {
     }
 
     struct dirent *entry;
-    FileHash hashes_now[MAX_FILES];
-    int num_now = 0;
+    FileHash hashes_act[MAX_FILES];
+    int num_act = 0;
+    
+
 
     while ((entry = readdir(dir)) != NULL) {
-        char path[512];
-        snprintf(path, sizeof(path), "%s/%s", DIRECTORY, entry->d_name);
+        char rutaArchivo[500];
+        snprintf(rutaArchivo, sizeof(rutaArchivo), "%s/%s", DIRECTORY, entry->d_name);
 
-        if (!is_regular_file(path)) continue;
-        if (ends_with_gz(entry->d_name)) continue;
+        if (!archivoAceptado(rutaArchivo)) continue;
+        if (ignoraGZ(entry->d_name)) continue;
 
-        char md5[256] = {0};
-        compute_md5(path, md5);
+        char md5[200] = {0};
+        md5sum(rutaArchivo, md5);
 
-        strcpy(hashes_now[num_now].filename, entry->d_name);
-        strcpy(hashes_now[num_now].md5, md5);
-        num_now++;
+        strcpy(hashes_act[num_act].nombreArchivo, entry->d_name);
+        strcpy(hashes_act[num_act].md5, md5);
+        strcpy(hashes_act[num_act].rutaCompleta, rutaArchivo);
+
+        num_act++;
     }
 
     closedir(dir);
 
-    for (int i = 0; i < num_now; i++) {
-        int found = 0;
+    // Comparación con revisión anterior
+    for (int i = 0; i < num_act; i++) {
+        int encontrar = 0;
         for (int j = 0; j < *num_prev; j++) {
-            if (strcmp(hashes_now[i].filename, hashes_prev[j].filename) == 0) {
-                found = 1;
-                if (strcmp(hashes_now[i].md5, hashes_prev[j].md5) != 0) {
-                    printf("Archivo modificado: %s\n", hashes_now[i].filename);
+            if (strcmp(hashes_act[i].nombreArchivo, hashes_prev[j].nombreArchivo) == 0) {
+                encontrar = 1;
+                if (strcmp(hashes_act[i].md5, hashes_prev[j].md5) != 0) {
+                    printf("Archivo modificado: %s\n", hashes_act[i].nombreArchivo);
+                 agregarArchivoEmpaquetar(hashes_act[i].rutaCompleta, archivosEmpaquetables, &cantidadEmpaquetables);
+
                 }
                 break;
             }
         }
-        if (!found) {
-            printf("Nuevo archivo detectado: %s\n", hashes_now[i].filename);
+        if (!encontrar) {
+            printf("Nuevo archivo detectado: %s\n", hashes_act[i].nombreArchivo);
+            agregarArchivoEmpaquetar(hashes_act[i].rutaCompleta, archivosEmpaquetables, &cantidadEmpaquetables);
         }
     }
 
-    *num_prev = num_now;
-    memcpy(hashes_prev, hashes_now, sizeof(FileHash) * num_now);
-}
-
-int main() {
-    signal(SIGINT, manejar_salida);
-
-    FileHash previous_hashes[MAX_FILES];
-    int num_prev = 0;
-
-    while (!detener) {
-        printf("\nRevisando el directorio %s...\n", DIRECTORY);
-        revisar_directorio(previous_hashes, &num_prev);
-        sleep(INTERVAL);
-    }
-
-    printf("\nLog_monitor terminado de forma ordenada.\n");
-    return 0;
+    // Actualizar lista anterior
+    *num_prev = num_act;
+    memcpy(hashes_prev, hashes_act, sizeof(FileHash) * num_act);
 }
