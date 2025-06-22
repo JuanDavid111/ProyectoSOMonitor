@@ -30,6 +30,6 @@ void manejar_salida(int signo);
 int archivoAceptado(const char *rutaArchivo);
 int ignorarGZ(const char *nombreArchivo);
 void md5sum(const char *filepath, char *md5_output);
-void revisarDirectorio(FileHash *hashes_prev, int *num_prev);
+void revisarDirectorio(FileHash *hashes_prev, int *num_prev, int *contador_intervalos);
 
 #endif // PRUEBA3_H

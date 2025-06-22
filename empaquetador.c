@@ -1,4 +1,5 @@
 #include "empaquetador.h"
+#include "comprimir/comprimir_utilidades.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,6 +64,7 @@ void empaquetar_archivos(ArchivoEmpaquetable archivos[], int cantidad) {
     uint64_t cero = 0;
     fwrite(&cero, sizeof(uint64_t), 1, pak);
 
+
     fclose(pak);
-    printf("Archivo empaquetado creado en: %s\n", rutaSalida);
+    comprimir(rutaSalida);
 }

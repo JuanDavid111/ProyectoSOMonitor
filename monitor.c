@@ -1,8 +1,10 @@
 #include "monitor.h"
 #include "empaquetador.h"
+#include "escribir/utilidades_escribir.h"
 volatile sig_atomic_t detener = 0;
 ArchivoEmpaquetable archivosEmpaquetables[MAX_FILES];
 int cantidadEmpaquetables = 0;
+int *contador_intervalos;
 void manejar_salida(int signo) {
     detener = 1;
 }
@@ -42,10 +44,14 @@ void md5sum(const char *rutaArchivo, char *md5_salida) {
         close(pipefd[0]); // Hijo: cerrar lectura
         dup2(pipefd[1], STDOUT_FILENO); // Redirigir stdout
         execlp("md5sum", "md5sum", rutaArchivo, NULL);
-        perror("execlp");
+        syslog("execlp");
         exit(EXIT_FAILURE);
     } else {
         close(pipefd[1]); // Padre: cerrar escritura
+       // Registrar PID del hijo en el archivo
+            char etiqueta[64];
+            snprintf(etiqueta, sizeof(etiqueta), "Intervalo %d", *contador_intervalos);
+            registrar_PID(etiqueta, getpid());
         waitpid(pid, NULL, 0);
         read(pipefd[0], md5_salida, 256);
         close(pipefd[0]);
@@ -130,5 +136,11 @@ void revisarDirectorio(FileHash *hashes_prev, int *num_prev) {
 
     // Actualizar lista anterior
     *num_prev = num_act;
+    // DEBUG: Imprimir archivos guardados para empaquetar
+printf("\n[DEBUG] Archivos actualmente en la lista para empaquetar (%d):\n", cantidadEmpaquetables);
+for (int k = 0; k < cantidadEmpaquetables; k++) {
+    printf("  - %s (tamaño: %lu bytes)\n", archivosEmpaquetables[k].ruta_completa, archivosEmpaquetables[k].tamano_bytes);
+}
+
     memcpy(hashes_prev, hashes_act, sizeof(FileHash) * num_act);
 }
