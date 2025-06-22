@@ -18,7 +18,7 @@ all: $(TARGET)
 # Esta regla compila el proyecto completo una vez que todos los archivos objeto
 # ya han sido compilados.
 $(TARGET): $(OBJECTS)
-gcc -o $(TARGET) $(OBJECTS) $(CFLAGS) $(LDLIBS)
+	gcc -o $(TARGET) $(OBJECTS) $(CFLAGS) $(LDLIBS)
 
 # Coloque aqui las lineas necesarias para compilar los archivos objeto que
 # definio en $(OBJECTS)
