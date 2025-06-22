@@ -1,31 +1,21 @@
-#include "demonio.h"     // Para la función demonizar
-#include <string.h>     // Para strerror
-#include <errno.h>      // Para errno
 
-#include <stdio.h>        // Para fprintf
-#include <stdlib.h>       // Para EXIT_FAILURE, EXIT_SUCCESS
-#include <unistd.h>       
-#include <syslog.h>
+#include "monitor.h"
+#include "empaquetador.h"
 
+int main() {
+    signal(SIGINT, manejar_salida);
 
+    FileHash hashes_anteriores[MAX_FILES];
+    int num_prev = 0;
 
-
-
-
-int main()
-{
-    demonizar();
-    openlog("prueba", LOG_PID | LOG_CONS, LOG_DAEMON);
-    syslog(LOG_INFO, "El demonio se ha iniciado correctamente.");
-    while (1) {
-        syslog(LOG_INFO, "El demonio está trabajando...");
-        sleep(10);  // Espera 10 segundos antes de la siguiente iteración
+    while (!detener) {
+        printf("\nRevisando el directorio %s...\n", DIRECTORY);
+        revisarDirectorio(hashes_anteriores, &num_prev);
+        empaquetar_archivos(archivosEmpaquetables, cantidadEmpaquetables); // <- Aquí se empaquetan
+        cantidadEmpaquetables = 0;  // Limpiar para siguiente ronda
+        sleep(INTERVAL);
     }
-    syslog(LOG_INFO, "salio");
-    // Cerrar syslog al finalizar
-    closelog();
-    
 
-    
+    printf("\nLog_monitor terminado de forma ordenada.\n");
     return 0;
 }

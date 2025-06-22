@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define MAX_PATH_LEN 512
-#define MAX_FILES 1024
+#define MAX_FILES 2000
 
 typedef struct {
     char ruta_completa[MAX_PATH_LEN];
@@ -15,6 +15,6 @@ typedef struct {
 extern ArchivoEmpaquetable archivosEmpaquetables[MAX_FILES];
 extern int cantidadEmpaquetables;
 
-//void empaquetar_archivos(ArchivoEmpaquetable archivos[], int cantidad);
+void empaquetar_archivos(ArchivoEmpaquetable archivos[], int cantidad);
 
 #endif

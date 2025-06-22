@@ -1,20 +1,19 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11
-OBJ = main.o prueba4.o empaquetador.o
+CFLAGS = -Wall -Wextra -std=c99
+OBJ = main.o monitor.o empaquetador.o
+TARGET = monitor
 
-all: programa
+all: $(TARGET)
 
-programa: $(OBJ)
-	$(CC) $(CFLAGS) -o programa $(OBJ)
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
 
-main.o: main.c prueba4.h
-	$(CC) $(CFLAGS) -c main.c
+main.o: main.c monitor.h empaquetador.h
 
-prueba4.o: prueba4.c prueba4.h empaquetador.h
-	$(CC) $(CFLAGS) -c prueba4.c
+monitor.o: monitor.c monitor.h empaquetador.h
 
 empaquetador.o: empaquetador.c empaquetador.h
-	$(CC) $(CFLAGS) -c empaquetador.c
 
 clean:
-	rm -f *.o programa
+	rm -f *.o $(TARGET)
+

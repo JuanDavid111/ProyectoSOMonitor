@@ -75,6 +75,8 @@ void agregarArchivoEmpaquetar(const char *ruta, ArchivoEmpaquetable *lista, int 
     (*cantidad)++;}
 
 void revisarDirectorio(FileHash *hashes_prev, int *num_prev) {
+  
+
     DIR *dir = opendir(DIRECTORY);
     if (!dir) {
         perror("opendir");

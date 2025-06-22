@@ -15,7 +15,7 @@
 #define DIRECTORY "/var/log"
 #define INTERVAL 10 // tiempo entre revisiones (segundos)
 #define MAX_FILES 2000
-#define BUFFER_SIZE 4000
+#define BUFFER_SIZE 4096
 
 typedef struct {
     char nombreArchivo[200];

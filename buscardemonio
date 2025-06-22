@@ -1,2 +1,0 @@
-ps xao pid,ppid,pgid,sid,comm | grep --nombre de ejecutable---
-grep "identificador del log" /var/log/syslog
